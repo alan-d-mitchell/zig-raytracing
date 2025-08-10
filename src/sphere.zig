@@ -1,6 +1,8 @@
 const std = @import("std");
 const hittable = @import("hit.zig");
+const ray = @import("ray.zig").Ray;
 const vec3 = @import("vec.zig").Vec3;
+const interval = @import("interval.zig").Interval;
 
 pub const Sphere = struct {
     center: vec3,
@@ -13,7 +15,7 @@ pub const Sphere = struct {
         };
     }
 
-    pub fn hit(self: Sphere, r: ray, ray_tmin: f64, ray_tmax: f64, rec: *hittable.HitRecord) bool {
+    pub fn hit(self: Sphere, r: ray, ray_t: interval, rec: *hittable.HitRecord) bool {
         const oc = self.center.subtract(r.origin());
         const a = r.direction().length_squared();
         const h = r.direction().dot(oc);
@@ -26,9 +28,10 @@ pub const Sphere = struct {
 
         // Find the nearest root that lies in the acceptable range
         var root = (h - sqrtd) / a;
-        if (root <= ray_tmin or ray_tmax <= root) {
+        if (!ray_t.surrounds(root)) {
             root = (h + sqrtd) / a;
-            if (root <= ray_tmin or ray_tmax <= root) {
+
+            if (!ray_t.surrounds(root)) {
                 return false;
             }
         }
