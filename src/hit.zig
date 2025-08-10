@@ -2,13 +2,14 @@ const std = @import("std");
 
 const vec3 = @import("vec.zig").Vec3;
 const ray = @import("ray.zig").Ray;
-const sphere = @import("sphere.zig").Sphere;
 const interval = @import("interval.zig").Interval;
+const material = @import("material.zig").Material;
 
 // struct to hold record of hit, very straightforward
 pub const HitRecord = struct {
     p: vec3,
     normal: vec3,
+    mat: *material,
     t: f64,
     front_face: bool,
 
@@ -18,6 +19,7 @@ pub const HitRecord = struct {
             .normal = vec3.zero(),
             .t = 0.0,
             .front_face = false,
+            .mat = undefined,
         };
     }
 
@@ -31,11 +33,11 @@ pub const HitRecord = struct {
 // allows to keep all the shapes under one variable but check the tag when hit is called
 // only sphere for now
 pub const Hittable = union(enum) {
-    sphere: sphere,
+    sphere: @import("sphere.zig").Sphere,
 
     pub fn hit(self: Hittable, r: ray, ray_t: interval, rec: *HitRecord) bool {
         switch (self) {
-            .sphere => |_sphere| return _sphere.hit(r, ray_t, rec),
+            .sphere => |sphere| return sphere.hit(r, ray_t, rec),
         }
     }
 };

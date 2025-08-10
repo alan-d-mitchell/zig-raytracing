@@ -3,20 +3,23 @@ const hittable = @import("hit.zig");
 const ray = @import("ray.zig").Ray;
 const vec3 = @import("vec.zig").Vec3;
 const interval = @import("interval.zig").Interval;
+const material = @import("material.zig").Material;
 
 pub const Sphere = struct {
     center: vec3,
     radius: f64,
+    mat: *material,
 
-    pub fn init(center: vec3, radius: f64) Sphere {
+    pub fn init(center: vec3, radius: f64, mat: *material) Sphere {
         return Sphere {
             .center = center,
             .radius = @max(0.0, radius),
+            .mat = mat,
         };
     }
 
     pub fn hit(self: Sphere, r: ray, ray_t: interval, rec: *hittable.HitRecord) bool {
-        const oc = self.center.subtract(r.origin());
+        const oc = r.origin().subtract(self.center);
         const a = r.direction().length_squared();
         const h = r.direction().dot(oc);
         const c = oc.length_squared() - self.radius * self.radius;
@@ -38,7 +41,9 @@ pub const Sphere = struct {
 
         rec.t = root;
         rec.p = r.at(rec.t);
-        rec.normal = rec.p.subtract(self.center).scale(1.0 / self.radius);
+        const outward_normal = rec.p.subtract(self.center).scale(1.0 / self.radius);
+        rec.set_face_normal(r, outward_normal);
+        rec.mat = self.mat;
 
         return true;
     }

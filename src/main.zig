@@ -32,6 +32,7 @@ pub fn main() !void {
         .pixel_00_location = undefined,
         .pixel_delta_u = undefined,
         .pixel_delta_v = undefined,
+        .pixel_samples_scale = undefined,
     };
 
     try cam.render(&world);

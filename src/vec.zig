@@ -1,4 +1,5 @@
 const std = @import("std");
+const rand = @import("utils.zig").Random;
 
 pub const Vec3 = struct {
     e: [3]f64,
@@ -73,12 +74,41 @@ pub const Vec3 = struct {
         return @sqrt(self.length_squared());
     }
 
-    pub fn normalize(self: Vec3) Vec3 {
+    // Same thing as unit vector
+    pub inline fn normalize(self: Vec3) Vec3 {
         const len = self.length();
         if (len > 0.0) {
             return self.scale(1.0 / len);
         }
         
         return self;
+    }
+
+    pub fn random() Vec3 {
+        return Vec3.new(rand.random_number(&rand.rng), rand.random_number(&rand.rng), rand.random_number(&rand.rng));
+    }
+
+    pub fn random_within_range(min: f64, max: f64) Vec3 {
+        return Vec3.new(rand.random_range(&rand.rng, min, max), rand.random_range(&rand.rng, min, max), rand.random_range(&rand.rng, min, max));
+    }
+
+    pub inline fn random_normalize() Vec3 {
+        while (true) {
+            const p = Vec3.random_within_range(-1, 1);
+            const lensq = p.length_squared();
+
+            if (1e-160 < lensq and lensq <= 1) {
+                return p.scale(1.0 / @sqrt(lensq));
+            }
+        }
+    }
+
+    pub inline fn random_on_hemisphere(normal: Vec3) Vec3 {
+        const on_unit_sphere = Vec3.random_normalize();
+        if (Vec3.dot(on_unit_sphere, normal) > 0.0) { // In same hemisphere as normal
+            return on_unit_sphere;
+        } else {
+            return on_unit_sphere.scale(-1.0);
+        }
     }
 };
