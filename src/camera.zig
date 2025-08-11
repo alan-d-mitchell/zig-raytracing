@@ -3,58 +3,81 @@ const std = @import("std");
 const vec3 = @import("vec.zig").Vec3;
 const color = @import("color.zig");
 const ray = @import("ray.zig").Ray;
-const hit = @import("hit.zig");
-const hit_record = hit.HitRecord;
-const hittable = hit.Hittable;
+const hit_record = @import("hit.zig").HitRecord;
+const hittable = @import("hit.zig").Hittable;
 const hittables = @import("hittables.zig").Hittables;
 const sphere = @import("sphere.zig").Sphere;
 const interval = @import("interval.zig").Interval;
 const math = @import("utils.zig").Math;
 const random = @import("utils.zig").Random;
+const material = @import("material.zig");
 
 pub const Camera = struct {
     const Self = @This();
 
-    pub const aspect_ratio = 16.0 / 9.0;
-    pub const image_width = 400; 
-    pub const samples_per_pixel = 50; // Count of random samples per pixel
-    pub const max_depth = 25; // Max number of ray bounces into scene
+    aspect_ratio: f64,
+    image_width: usize, 
+    samples_per_pixel: i32, // Count of random samples per pixel
+    max_depth: i32, // Max number of ray bounces into scene
+    vfov: f64, // Vertical FOV
+    look_from: vec3,
+    look_at: vec3,
+    vup: vec3, // relative up direction of cam 
+    defocus_angle: f64, // variation angle of rays
+    focus_dist: f64, // distance from camera look_from point to plane of perfect focus
 
-    image_height: i32,
-    pixel_samples_scale: f64,
-    center: vec3,
-    pixel_00_location: vec3,
-    pixel_delta_u: vec3,
-    pixel_delta_v: vec3,
+    // These need to be non field members
+    pub var image_height: i32 = undefined;
+    pub var pixel_samples_scale: f64 = undefined;
+    pub var center: vec3 = undefined;
+    pub var pixel_00_location: vec3 = undefined;
+    pub var pixel_delta_u: vec3 = undefined;
+    pub var pixel_delta_v: vec3 = undefined;
+    pub var u: vec3 = undefined;
+    pub var v: vec3 = undefined;
+    pub var w: vec3 = undefined;
+    pub var defocus_disk_u: vec3 = undefined;
+    pub var defocus_disk_v: vec3 = undefined;
 
     pub fn initialize(self: *Self) void {
-        self.image_height = @intFromFloat(@as(f64, @floatFromInt(image_width)) / aspect_ratio);
-        if (self.image_height < 1) { self.image_height = 1; } else { self.image_height = self.image_height; }
+        image_height = @intFromFloat(@as(f64, @floatFromInt(self.image_width)) / self.aspect_ratio);
+        if (image_height < 1) { image_height = 1; } else { image_height = image_height; }
 
-        self.pixel_samples_scale = 1.0 / @as(f64, @floatFromInt(samples_per_pixel));
+        pixel_samples_scale = 1.0 / @as(f64, @floatFromInt(self.samples_per_pixel));
 
         // set up camera
-        self.center = vec3.new(0, 0, 0);
-        const focal_length = 1.0;
-        const viewport_height = 2.0;
-        const viewport_width = viewport_height * (@as(f64, @floatFromInt(image_width)) / @as(f64, @floatFromInt(self.image_height)));
+        center = self.look_from;
+        const theta = math.degrees_to_radians(self.vfov);
+        const h = @tan(theta / 2);
+        const viewport_height = 2.0 * h * self.focus_dist;
+        const viewport_width = viewport_height * (@as(f64, @floatFromInt(self.image_width)) / @as(f64, @floatFromInt(image_height)));
+
+        // calculate u, v, w unit basis vectors for camera coordinate frame
+        w = self.look_from.subtract(self.look_at).normalize();
+        u = self.vup.cross(w).normalize();
+        v = w.cross(u);
 
         // calculate vectors across horizontal and down vertical viewport
-        const viewport_u = vec3.new(viewport_width, 0, 0);
-        const viewport_v = vec3.new(0, -viewport_height, 0);
+        const viewport_u = u.scale(viewport_width);
+        const viewport_v = v.scale(-viewport_height);
 
         // calculate horizontal and vertical delta vectors from pixel to pixel
-        self.pixel_delta_u = viewport_u.scale(1.0 / @as(f64, @floatFromInt(image_width)));
-        self.pixel_delta_v = viewport_v.scale(1.0 / @as(f64, @floatFromInt(self.image_height)));
+        pixel_delta_u = viewport_u.scale(1.0 / @as(f64, @floatFromInt(self.image_width)));
+        pixel_delta_v = viewport_v.scale(1.0 / @as(f64, @floatFromInt(image_height)));
 
-        const viewport_upper_left = self.center
-        .subtract(vec3.new(0, 0, focal_length))
-        .subtract(viewport_u.scale(0.5))
-        .subtract(viewport_v.scale(0.5));
+        const viewport_upper_left = center
+            .subtract(w.scale(self.focus_dist))
+            .subtract(viewport_u.scale(0.5))
+            .subtract(viewport_v.scale(0.5));
 
-        self.pixel_00_location = viewport_upper_left.add(
-            self.pixel_delta_u.add(self.pixel_delta_v).scale(0.5)
+        pixel_00_location = viewport_upper_left.add(
+            pixel_delta_u.add(pixel_delta_v).scale(0.5)
         );
+
+        // calculate the camera defocus disk basis vectors
+        const defocus_radius = self.focus_dist * @tan(math.degrees_to_radians(self.defocus_angle / 2));
+        defocus_disk_u = u.scale(defocus_radius);
+        defocus_disk_v = v.scale(defocus_radius);
     }
 
     pub fn sample_square() vec3 {
@@ -70,15 +93,27 @@ pub const Camera = struct {
         // directed at the randomly sampled point around the pixel location i, j
 
         const offset = sample_square();
-        const pixel_sample = self.pixel_00_location
-            .add(self.pixel_delta_u.scale(@as(f64, @floatFromInt(i)) + offset.get_x()))
-            .add(self.pixel_delta_v.scale(@as(f64, @floatFromInt(j)) + offset.get_y())
+        const pixel_sample = pixel_00_location
+            .add(pixel_delta_u.scale(@as(f64, @floatFromInt(i)) + offset.get_x()))
+            .add(pixel_delta_v.scale(@as(f64, @floatFromInt(j)) + offset.get_y())
         );
 
-        const ray_origin = self.center;
+        const ray_origin = if (self.defocus_angle <= 0)
+            center
+        else 
+            defocus_disk_sample();
         const ray_direction = pixel_sample.subtract(ray_origin);
 
         return ray.init(ray_origin, ray_direction);
+    }
+
+    pub fn defocus_disk_sample() vec3 {
+        const p = vec3.random_in_unit_disk();
+
+        return center
+            .add(defocus_disk_u.scale(p.get_x()))
+            .add(defocus_disk_v.scale(p.get_y())
+        );
     }
 
     pub fn render(self: *Self, world: *const hittables) !void {
@@ -89,20 +124,20 @@ pub const Camera = struct {
         const writer = file.writer();
         const stderr = std.io.getStdErr().writer();
 
-        try writer.print("P3\n{d} {d}\n255\n", .{ image_width, self.image_height });
+        try writer.print("P3\n{d} {d}\n255\n", .{ self.image_width, image_height });
 
-        for (0..@intCast(self.image_height)) |j| {
-            try stderr.print("\rScanlines remaining: {d} ", .{ self.image_height - @as(i32, @intCast(j)) });
+        for (0..@intCast(image_height)) |j| {
+            try stderr.print("\rScanlines remaining: {d} ", .{ image_height - @as(i32, @intCast(j)) });
 
-            for (0..image_width) |i| {
+            for (0..@intCast(self.image_width)) |i| {
                 var pixel_color = vec3.new(0, 0, 0);
 
-                for (0..@intCast(samples_per_pixel)) |_| {
-                    const r = self.get_ray(@intCast(i), @intCast(j));
-                    pixel_color = pixel_color.add(ray_color(r, max_depth, world));
+                for (0..@intCast(self.samples_per_pixel)) |_| {
+                    const r = get_ray(self, @intCast(i), @intCast(j));
+                    pixel_color = pixel_color.add(ray_color(r, self.max_depth, world));
                 }
 
-                try color.write_color(writer, pixel_color.scale(self.pixel_samples_scale));
+                try color.write_color(writer, pixel_color.scale(pixel_samples_scale));
             }
         }
         try stderr.print("\rDone                        \n", .{});
@@ -115,9 +150,14 @@ pub const Camera = struct {
         var rec: hit_record = hit_record.init();
 
         if (world.hit(r, interval.new(0.001, std.math.inf(f64)), &rec)) {
-            const direction = rec.normal.add(vec3.random_normalize());
+            var scattered: ray = undefined;
+            var attenuation: vec3 = undefined;
+            
+            if (rec.mat.scatter(r, &rec, &attenuation, &scattered)) {
+                return attenuation.multiply(ray_color(scattered, depth - 1, world));
+            }
 
-            return ray_color(ray.init(rec.p, direction), depth - 1, world).scale(0.3);
+            return vec3.zero();
         }
 
         const unit_direction: vec3 = r.direction().normalize();
