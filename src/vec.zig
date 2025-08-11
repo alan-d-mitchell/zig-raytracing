@@ -32,7 +32,7 @@ pub const Vec3 = struct {
         return self.e[2];
     }
 
-    pub fn add(self: Vec3, other: Vec3) Vec3 {
+    pub inline fn add(self: Vec3, other: Vec3) Vec3 {
         return Vec3 {
             .e = .{
                 self.e[0] + other.e[0],
@@ -42,7 +42,7 @@ pub const Vec3 = struct {
         };
     }
 
-    pub fn subtract(self: Vec3, other: Vec3) Vec3 {
+    pub inline fn subtract(self: Vec3, other: Vec3) Vec3 {
         return Vec3 {
             .e = .{
                 self.e[0] - other.e[0],
@@ -52,7 +52,25 @@ pub const Vec3 = struct {
         };
     }
 
-    pub fn scale(self: Vec3, t: f64) Vec3 {
+    pub inline fn multiply(self: Vec3, other: Vec3) Vec3 {
+        return Vec3 {
+            .e = .{
+                self.e[0] * other.e[0],
+                self.e[1] * other.e[1],
+                self.e[2] * other.e[2],
+            },
+        };
+    }
+
+    pub inline fn cross(self: Vec3, other: Vec3) Vec3 {
+        return Vec3.new(
+            self.e[1] * other.e[2] - self.e[2] * other.e[1],
+            self.e[2] * other.e[0] - self.e[0] * other.e[2],
+            self.e[0] * other.e[1] - self.e[1] * other.e[0],
+        );
+    }
+
+    pub inline fn scale(self: Vec3, t: f64) Vec3 {
         return Vec3 {
             .e = .{
                 self.e[0] * t,
@@ -62,15 +80,15 @@ pub const Vec3 = struct {
         };
     }
 
-    pub fn dot(self: Vec3, other: Vec3) f64 {
+    pub inline fn dot(self: Vec3, other: Vec3) f64 {
         return self.e[0] * other.e[0] + self.e[1] * other.e[1] + self.e[2] * other.e[2];
     }
 
-    pub fn length_squared(self: Vec3) f64 {
+    pub inline fn length_squared(self: Vec3) f64 {
         return self.dot(self);
     }
 
-    pub fn length(self: Vec3) f64 {
+    pub inline fn length(self: Vec3) f64 {
         return @sqrt(self.length_squared());
     }
 
@@ -80,15 +98,15 @@ pub const Vec3 = struct {
         if (len > 0.0) {
             return self.scale(1.0 / len);
         }
-        
+
         return self;
     }
 
-    pub fn random() Vec3 {
+    pub inline fn random() Vec3 {
         return Vec3.new(rand.random_number(&rand.rng), rand.random_number(&rand.rng), rand.random_number(&rand.rng));
     }
 
-    pub fn random_within_range(min: f64, max: f64) Vec3 {
+    pub inline fn random_within_range(min: f64, max: f64) Vec3 {
         return Vec3.new(rand.random_range(&rand.rng, min, max), rand.random_range(&rand.rng, min, max), rand.random_range(&rand.rng, min, max));
     }
 
@@ -109,6 +127,36 @@ pub const Vec3 = struct {
             return on_unit_sphere;
         } else {
             return on_unit_sphere.scale(-1.0);
+        }
+    }
+
+    pub inline fn near_zero(self: Vec3) bool {
+        const s = 1e-8;
+
+        return (@abs(self.e[0]) < s) and
+                (@abs(self.e[1]) < s) and
+                (@abs(self.e[2]) < s);
+    }
+
+    pub inline fn reflect(v: Vec3, n: Vec3) Vec3 {
+        return v.subtract(n.scale(2 * v.dot(n)));
+    }
+
+    pub inline fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) Vec3 {
+        const cos_theta = @min(uv.scale(-1.0).dot(n), 1.0);
+        const r_out_prep: Vec3 = uv.add(n.scale(cos_theta)).scale(etai_over_etat);
+        const r_out_parallel = n.scale(-@sqrt(@abs(1.0 - r_out_prep.length_squared())));
+
+        return r_out_prep.add(r_out_parallel);
+    }
+
+    pub inline fn random_in_unit_disk() Vec3 {
+        while (true) {
+            const p = Vec3.new(rand.random_range(&rand.rng, -1, 1), rand.random_range(&rand.rng, -1, 1), 0);
+
+            if (p.length_squared() < 1) {
+                return p;
+            }
         }
     }
 };
