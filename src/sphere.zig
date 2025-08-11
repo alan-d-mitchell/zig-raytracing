@@ -8,9 +8,9 @@ const material = @import("material.zig").Material;
 pub const Sphere = struct {
     center: vec3,
     radius: f64,
-    mat: *material,
+    mat: *const material,
 
-    pub fn init(center: vec3, radius: f64, mat: *material) Sphere {
+    pub fn init(center: vec3, radius: f64, mat: *const material) Sphere {
         return Sphere {
             .center = center,
             .radius = @max(0.0, radius),
@@ -30,9 +30,9 @@ pub const Sphere = struct {
         const sqrtd = @sqrt(discriminant);
 
         // Find the nearest root that lies in the acceptable range
-        var root = (h - sqrtd) / a;
+        var root = (-h - sqrtd) / a;
         if (!ray_t.surrounds(root)) {
-            root = (h + sqrtd) / a;
+            root = (-h + sqrtd) / a;
 
             if (!ray_t.surrounds(root)) {
                 return false;
