@@ -9,7 +9,7 @@ const material = @import("material.zig").Material;
 pub const HitRecord = struct {
     p: vec3,
     normal: vec3,
-    mat: *material,
+    mat: *const material,
     t: f64,
     front_face: bool,
 
