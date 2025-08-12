@@ -34,11 +34,11 @@ pub const Hittables = struct {
         self.objects.clearAndFree();
     }
 
-    pub fn add(self: *Hittables, object: hittable) !void {
+    pub inline fn add(self: *Hittables, object: hittable) !void {
         try self.objects.append(object);
     }
 
-    pub fn hit(self: Hittables, r: ray, ray_t: interval, rec: *hit_record) bool {
+    pub inline fn hit(self: Hittables, r: ray, ray_t: interval, rec: *hit_record) bool {
         var temp_rec = hit_record.init();
         var hit_anything = false;
         var closest_so_far = ray_t.max;

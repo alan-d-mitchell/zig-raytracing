@@ -18,7 +18,7 @@ pub const Sphere = struct {
         };
     }
 
-    pub fn hit(self: Sphere, r: ray, ray_t: interval, rec: *hittable.HitRecord) bool {
+    pub inline fn hit(self: Sphere, r: ray, ray_t: interval, rec: *hittable.HitRecord) bool {
         const oc = r.origin().subtract(self.center);
         const a = r.direction().length_squared();
         const h = r.direction().dot(oc);

@@ -9,7 +9,7 @@ pub inline fn linear_to_gamma(linear_component: f64) f64 {
     return 0;
 }
 
-pub fn write_color(writer: anytype, pixel: vec3) !void {
+pub inline fn write_color(writer: anytype, pixel: vec3) !void {
     var r = pixel.get_x();
     var g = pixel.get_y();
     var b = pixel.get_z();

@@ -39,7 +39,7 @@ pub const Camera = struct {
     pub var defocus_disk_u: vec3 = undefined;
     pub var defocus_disk_v: vec3 = undefined;
 
-    pub fn initialize(self: *Self) void {
+    pub inline fn initialize(self: *Self) void {
         image_height = @intFromFloat(@as(f64, @floatFromInt(self.image_width)) / self.aspect_ratio);
         if (image_height < 1) { image_height = 1; } else { image_height = image_height; }
 
@@ -80,7 +80,7 @@ pub const Camera = struct {
         defocus_disk_v = v.scale(defocus_radius);
     }
 
-    pub fn sample_square() vec3 {
+    pub inline fn sample_square() vec3 {
         return vec3.new(
             random.random_number(&random.rng) - 0.5, 
             random.random_number(&random.rng) - 0.5, 
@@ -88,7 +88,7 @@ pub const Camera = struct {
         );
     }
 
-    pub fn get_ray(self: *Self, i: i32, j: i32) ray {
+    pub inline fn get_ray(self: *Self, i: i32, j: i32) ray {
         // construct a camera ray originating from the origin
         // directed at the randomly sampled point around the pixel location i, j
 
@@ -107,7 +107,7 @@ pub const Camera = struct {
         return ray.init(ray_origin, ray_direction);
     }
 
-    pub fn defocus_disk_sample() vec3 {
+    pub inline fn defocus_disk_sample() vec3 {
         const p = vec3.random_in_unit_disk();
 
         return center
@@ -116,7 +116,7 @@ pub const Camera = struct {
         );
     }
 
-    pub fn render(self: *Self, world: *const hittables) !void {
+    pub inline fn render(self: *Self, world: *const hittables) !void {
         self.initialize();
 
         const file = try std.fs.cwd().createFile("image.ppm", .{});

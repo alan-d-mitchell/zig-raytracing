@@ -23,7 +23,7 @@ pub const HitRecord = struct {
         };
     }
 
-    pub fn set_face_normal(self: *HitRecord, r: ray, outward_normal: vec3) void {
+    pub inline fn set_face_normal(self: *HitRecord, r: ray, outward_normal: vec3) void {
         self.front_face = r.direction().dot(outward_normal) < 0;
         self.normal = if (self.front_face) outward_normal else outward_normal.scale(-1.0);
     }
@@ -35,7 +35,7 @@ pub const HitRecord = struct {
 pub const Hittable = union(enum) {
     sphere: @import("sphere.zig").Sphere,
 
-    pub fn hit(self: Hittable, r: ray, ray_t: interval, rec: *HitRecord) bool {
+    pub inline fn hit(self: Hittable, r: ray, ray_t: interval, rec: *HitRecord) bool {
         switch (self) {
             .sphere => |sphere| return sphere.hit(r, ray_t, rec),
         }

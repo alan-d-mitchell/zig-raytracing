@@ -40,7 +40,7 @@ pub const Ray = struct {
         return self.dir;
     }
 
-    pub fn at(self: Ray, t: f64) vec3 {
+    pub inline fn at(self: Ray, t: f64) vec3 {
         return self.orig.add(self.dir.scale(t));
     }
 };

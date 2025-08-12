@@ -11,7 +11,7 @@ pub const Material = union(enum) {
     metal: Metal,
     dielectric: Dielectric,
 
-    pub fn scatter(self: Material, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
+    pub inline fn scatter(self: Material, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
         switch (self) {
             .lambertian => |l| return l.scatter(r_in, rec, attenuation, scattered),
             .metal => |m| return m.scatter(r_in, rec, attenuation, scattered),
@@ -29,7 +29,7 @@ pub const Lambertian = struct {
         };
     }
     
-    pub fn scatter(self: Lambertian, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
+    pub inline fn scatter(self: Lambertian, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
         _ = r_in; // unused param
         
         // Generate random unit vector
@@ -57,7 +57,7 @@ pub const Metal = struct {
         };
     }
 
-    pub fn scatter(self: Metal, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
+    pub inline fn scatter(self: Metal, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
         const reflected = vec3.reflect(r_in.direction().normalize(), rec.normal);
         scattered.* = ray.init(rec.p, reflected.add(vec3.random_normalize().scale(self.fuzz)));
         attenuation.* = self.albedo;
@@ -78,7 +78,7 @@ pub const Dielectric = struct {
     }
     
      
-    pub fn reflectance(cosine: f64, refraction_index: f64) f64 {
+    pub inline fn reflectance(cosine: f64, refraction_index: f64) f64 {
         // Schlicks approximation for reflectance
         var r0 = (1 - refraction_index) / (1 + refraction_index);
         r0 = r0 * r0;
@@ -86,7 +86,7 @@ pub const Dielectric = struct {
         return r0 + (1 - r0) * std.math.pow(f64, 1 - cosine, 5);
     }
 
-    pub fn scatter(self: Dielectric, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
+    pub inline fn scatter(self: Dielectric, r_in: ray, rec: *const hit_record, attenuation: *vec3, scattered: *ray) bool {
         attenuation.* = vec3.new(1.0, 1.0, 1.0);
         
         const ri = if (rec.front_face)
