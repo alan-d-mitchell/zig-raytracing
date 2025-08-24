@@ -13,10 +13,14 @@ const material = @import("material.zig");
 const random = @import("utils.zig").Random;
 
 pub fn main() !void {
-    var world = hittables.init(std.heap.page_allocator);
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var world = hittables.init(allocator);
     defer world.deinit();
 
-    var material_list = std.ArrayList(material.Material).init(std.heap.page_allocator);
+    var material_list = std.ArrayList(material.Material).init(allocator);
     defer material_list.deinit();
     try material_list.ensureTotalCapacity(500);
 
@@ -108,8 +112,8 @@ pub fn main() !void {
     var cam = camera {
         .aspect_ratio = 16.0 / 9.0,
         .image_width = 1200,
-        .samples_per_pixel = 250,
-        .max_depth = 50,
+        .samples_per_pixel = 100,
+        .max_depth = 100,
         .vfov = 20,
         .look_from = vec3.new(13, 2, 3),
         .look_at = vec3.zero(),
