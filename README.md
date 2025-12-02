@@ -4,4 +4,6 @@ This is a small project based on the **Ray Tracing in One Weekend** book, transl
 
 Feel free to explore and experiment!
 
+NOTE: it has not yet been migrated to be compatible with zig 0.15
+
 ---
